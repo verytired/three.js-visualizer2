@@ -28,7 +28,6 @@ class App {
 	private material;
 	private isWireFrame:Boolean =false;
 	private animationId;
-	private audioManager:AudioManager;
 	private canvas;
 	private canvasContext;
 	private spectrums;
