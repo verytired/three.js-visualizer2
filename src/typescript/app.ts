@@ -14,6 +14,10 @@ declare var SC: {
 	initialize: (a)=>any;
 };
 
+declare module THREE {
+	export var OrbitControls;
+}
+
 class App {
 
 	private scene:THREE.Scene;
@@ -29,7 +33,6 @@ class App {
 	private canvas;
 	private canvasContext;
 	private spectrums;
-
 
 	constructor() {
 		console.log("app start");
