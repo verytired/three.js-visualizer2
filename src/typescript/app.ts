@@ -1,6 +1,5 @@
 /// <reference path="DefinitelyTyped/threejs/three.d.ts" />
 /// <reference path="DefinitelyTyped/dat-gui/dat-gui.d.ts" />
-/// <reference path="AudioManager.ts" />
 
 interface Window {
 	AudioContext: any;
@@ -74,7 +73,7 @@ class App {
 				//console.log(bytes);
 				var d = bytes[8];
 				//this.cube.position.y = d
-				this.cube.scale.set(d / 100, d / 100, d / 100);
+				if(d>0)this.cube.scale.set(d / 100, d / 100, d / 100);
 				this.renderer.render(this.scene, this.camera);
 
 			},1000/60)
