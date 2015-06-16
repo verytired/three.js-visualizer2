@@ -1,8 +1,14 @@
+/// <reference path="DefinitelyTyped/threejs/three.d.ts" />
+/// <reference path="DefinitelyTyped/dat-gui/dat-gui.d.ts" />
+/// <reference path="AudioManager.ts" />
+
 interface Window {
 	AudioContext: any;
 	webkitAudioContext: any;
 }
 
+//外部ライブラリ定義
+//この部分はコンパイルのみに使われるので型指定は適当
 declare var SC: {
 	get: (a,b,c)=>any;
 	initialize: (a)=>any;

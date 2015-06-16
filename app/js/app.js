@@ -1,3 +1,41 @@
+var AudioManager = (function () {
+    function AudioManager(callback, callbackObj) {
+        var _this = this;
+        this.audioContext = new AudioContext();
+        this.fileReader = new FileReader();
+        this.isPlaySound = false;
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 128;
+        this.analyser.connect(this.audioContext.destination);
+        this.fileReader.onload = function () {
+            _this.audioContext.decodeAudioData(_this.fileReader.result, function (buffer) {
+                _this.source = _this.audioContext.createBufferSource();
+                _this.source.buffer = buffer;
+                _this.source.connect(_this.analyser);
+                _this.isPlaySound = true;
+                if (callback != null && callbackObj != null)
+                    callback.apply(callbackObj);
+            });
+        };
+        document.getElementById('file').addEventListener('change', function (e) {
+            _this.fileReader.readAsArrayBuffer(e.target.files[0]);
+        });
+    }
+    AudioManager.prototype.play = function () {
+        if (this.isPlaySound == true) {
+            this.source.start(0);
+        }
+    };
+    AudioManager.prototype.getSpectrum = function () {
+        var spectrums = new Uint8Array(this.analyser.frequencyBinCount);
+        this.analyser.getByteFrequencyData(spectrums);
+        return spectrums;
+    };
+    AudioManager.prototype.getAnalyser = function () {
+        return this.analyser;
+    };
+    return AudioManager;
+})();
 var App = (function () {
     function App() {
         console.log("app start");
@@ -6,22 +44,17 @@ var App = (function () {
         SC.initialize({
             client_id: CLIENT_ID
         });
-        //// get the sound info
         SC.get('/resolve', { url: TRACK_URL }, function (sound) {
             if (sound.errors) {
-                // error occur
                 for (var i = 0; i < sound.errors.length; i++) {
                     console.log(sound.errors[i].error_message);
                 }
                 return;
             }
-            // succeed in getting the sound info
             console.log(sound);
-            // set the stream url to the audio element
             var audio = document.getElementById('audio');
             var streamUrl = sound.stream_url + '?client_id=' + CLIENT_ID;
             audio.setAttribute('src', streamUrl);
-            // create and setup an analyser
             var audioCtx = new (window.AudioContext || window.webkitAudioContext);
             var analyser = audioCtx.createAnalyser();
             analyser.fftSize = 256;

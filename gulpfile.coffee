@@ -26,9 +26,16 @@ gulp.task 'default', ->
 #typescript compile
 gulp.task 'typescript', () ->
 	gulp
-	.src 'src/typescript/*.ts'
+	.src ['src/typescript/*.ts','src/*/*.ts']
 	.pipe $.plumber()
-	.pipe $.tsc()
+	.pipe $.typescript {
+		module:"amd"
+		target: 'ES6'
+		removeComments: true
+		sortOutput: false
+		sourcemap: false
+		out: 'app.js'
+	}
 	.pipe gulp.dest parentDir + 'js'
 
 gulp.task 'sass',()->
@@ -69,5 +76,3 @@ gulp.task 'script_type', ->
 #sass compile&reload
 gulp.task 'script_sass', ->
 	runSequence 'compass', reload
-
-
