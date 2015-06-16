@@ -46,6 +46,15 @@ class App {
 			var source = audioCtx.createMediaElementSource(audio);
 			source.connect(analyser);
 			analyser.connect(audioCtx.destination);
+
+			var bytes = new Uint8Array(analyser.frequencyBinCount);
+
+			//描画用ループを設定しその中で再生中のバッファを取得する
+			var drawId = setInterval(()=>{
+				analyser.getByteFrequencyData(bytes);
+				//console.log(bytes);
+			},1000/60)
+
 		});
 	}
 }

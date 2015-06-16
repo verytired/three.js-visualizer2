@@ -61,6 +61,10 @@ var App = (function () {
             var source = audioCtx.createMediaElementSource(audio);
             source.connect(analyser);
             analyser.connect(audioCtx.destination);
+            var bytes = new Uint8Array(analyser.frequencyBinCount);
+            var drawId = setInterval(function () {
+                analyser.getByteFrequencyData(bytes);
+            }, 1000 / 60);
         });
     }
     return App;
