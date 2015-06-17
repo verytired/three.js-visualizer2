@@ -52,7 +52,7 @@ class App {
 			console.log(sound);
 
 			// set the stream url to the audio element
-			var audio = document.getElementById('audio');
+			var audio:any = document.getElementById('audio');
 			var streamUrl = sound.stream_url + '?client_id=' + CLIENT_ID;
 			audio.setAttribute('src', streamUrl);
 
@@ -78,7 +78,9 @@ class App {
 			},1000/60)
 
 			this.initThreeJS();
-
+			this.cube.scale.set(0.001,0.001,0.001)
+			//start
+			audio.play();
 		});
 	}
 

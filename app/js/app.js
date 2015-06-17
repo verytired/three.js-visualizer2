@@ -39,6 +39,8 @@ var App = (function () {
                 _this.renderer.render(_this.scene, _this.camera);
             }, 1000 / 60);
             _this.initThreeJS();
+            _this.cube.scale.set(0.001, 0.001, 0.001);
+            audio.play();
         });
     }
     App.prototype.initThreeJS = function () {
