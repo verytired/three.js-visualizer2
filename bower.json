@@ -19,5 +19,8 @@
     "threejs": "*",
     "requirejs": "~2.1.17",
     "dat-gui": "~0.5.1"
+  },
+  "devDependencies": {
+    "eventemitter2": "~0.4.14"
   }
 }
