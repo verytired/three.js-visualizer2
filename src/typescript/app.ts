@@ -8,8 +8,8 @@ interface Window {
 
 //外部ライブラリ定義
 //この部分はコンパイルのみに使われるので型指定は適当
-declare var SC: {
-	get: (a,b,c)=>any;
+declare var SC:{
+	get: (a, b, c)=>any;
 	initialize: (a)=>any;
 };
 
@@ -26,19 +26,42 @@ class App {
 	private controls;
 	private cube;
 	private material;
-	private isWireFrame:Boolean =false;
+	private isWireFrame:Boolean = false;
 	private animationId;
 	private canvas;
 	private canvasContext;
 	private spectrums;
 
+	private source;
+	private analyser;
+	private buffer;
+	private audioBuffer;
+	private audioContext;
+	private freqByteData;
+	private timeByteData;
+
+	private rings = [];
+	private levels = [];
+	private colors = [];
+
+	private RINGCOUNT = 160;//リングの数
+	private SEPARATION = 30;
+	private INIT_RADIUS = 50;
+	private SEGMENTS = 512; //リングの分割数
+	private BIN_COUNT = 512;
+
+	private loopGeom;
+
 	constructor() {
 		console.log("app start");
+
 		var CLIENT_ID = 'd4668edbb5d755565ca2079b70b35576';
-		var TRACK_URL = 'https://soundcloud.com/dj_potato_salad/d-j-potato-salad-presents-y-a';
+		var TRACK_URL = 'https://soundcloud.com/ben-klock/josh-wink-are-you-there-ben-klock-remix';
+
 		SC.initialize({
 			client_id: CLIENT_ID
 		});
+
 		//// get the sound info
 		SC.get('/resolve', {url: TRACK_URL}, (sound)=> {
 			if (sound.errors) {
@@ -57,34 +80,28 @@ class App {
 			audio.setAttribute('src', streamUrl);
 
 			// create and setup an analyser
-			var audioCtx = new (window.AudioContext || window.webkitAudioContext);
-			var analyser = audioCtx.createAnalyser();
-			analyser.fftSize = 256;
-			var source = audioCtx.createMediaElementSource(audio);
-			source.connect(analyser);
-			analyser.connect(audioCtx.destination);
+			this.audioContext = new (window.AudioContext || window.webkitAudioContext);
+			this.analyser = this.audioContext.createAnalyser();
+			this.analyser.smoothingTimeConstant = 0.1;
+			this.analyser.fftSize = 1024;
+			this.source = this.audioContext.createMediaElementSource(audio);
+			this.source.connect(this.analyser);
+			this.analyser.connect(this.audioContext.destination);
 
-			var bytes = new Uint8Array(analyser.frequencyBinCount);
-
-			//描画用ループを設定しその中で再生中のバッファを取得する
-			var drawId = setInterval(()=>{
-				analyser.getByteFrequencyData(bytes);
-				//console.log(bytes);
-				var d = bytes[8];
-				//this.cube.position.y = d
-				if(d>0)this.cube.scale.set(d / 100, d / 100, d / 100);
-				this.renderer.render(this.scene, this.camera);
-
-			},1000/60)
+			//var bytes = new Uint8Array(analyser.frequencyBinCount);
+			this.freqByteData = new Uint8Array(this.analyser.frequencyBinCount);
+			this.timeByteData = new Uint8Array(this.analyser.frequencyBinCount);
 
 			this.initThreeJS();
-			this.cube.scale.set(0.001,0.001,0.001)
+			this.cube.scale.set(0.001, 0.001, 0.001)
+
 			//start
+			this.animate();
 			audio.play();
 		});
 	}
 
-	private initThreeJS(){
+	private initThreeJS() {
 		//1.カメラ追加
 		this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
 		this.camera.position.set(0, 70, 70);
@@ -101,7 +118,7 @@ class App {
 			preserveDrawingBuffer: true
 		});
 		this.renderer.setPixelRatio(window.devicePixelRatio);
-		this.renderer.setClearColor(0xffffff);
+		this.renderer.setClearColor(0x000000);
 		this.renderer.shadowMapEnabled = true;
 
 		//4.表示コンテナ指定
@@ -117,9 +134,10 @@ class App {
 		directionalLight.position.set(0, 100, 30);
 		directionalLight.castShadow = true;
 		this.scene.add(directionalLight);
+
 		//cube追加
-		var geometry = new THREE.CubeGeometry(40, 40, 40);
-		this.material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+		var geometry = new THREE.BoxGeometry(40, 40, 40);
+		this.material = new THREE.MeshPhongMaterial({color: 0xff0000});
 		this.cube = new THREE.Mesh(geometry, this.material);
 		this.cube.position.set(0, 0, 0);
 		this.cube.castShadow = true;
@@ -141,29 +159,62 @@ class App {
 		this.canvasContext = this.canvas.getContext('2d');
 		//this.canvas.setAttribute('width', this.audioManager.getAnalyser().frequencyBinCount * 10);
 
+		//shape test circle
+		var loopShape = new THREE.Shape();
+		var r = 100
+
+		loopShape.absarc(0, 0, 100, 0, Math.PI * 2, false);//これで円を書いている absarc(原点x,原点y,半径,start角度,end角度,???)
+		this.loopGeom = loopShape.createPointsGeometry(512 / 2);//shapeにgeometoryの頂点データを生成する  //2点生成されるから半分の数の指定でいい？
+		this.loopGeom.dynamic = true;
+
+		//頂点をLineで結ぶ
+		var m = new THREE.LineBasicMaterial({
+			color: 0xffffff,
+			linewidth: 1,
+			opacity: 0.7,
+			blending: THREE.AdditiveBlending,
+			depthTest: false,
+			transparent: true
+		});
+		var line = new THREE.Line(this.loopGeom, m);
+
+		var scale = 1;
+		scale *= 0.5;
+		line.scale.x = scale;
+		line.scale.y = scale;
+		this.scene.add(line);
+
+		//z-index
+		for (var j = 0; j < this.SEGMENTS; j++) {
+			this.loopGeom.vertices[j].z = Math.random(1000) * 10
+		}
+		// link up last segment
+		this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
+
+
+		//dat-gui設定
 		var gui = new dat.GUI();
 		var wireframeControl = gui.add(this, 'isWireFrame');
-		wireframeControl.onChange( (value)=> {
+		wireframeControl.onChange((value)=> {
 			this.material.wireframe = value
 		});
 
+
 		/*** ADDING SCREEN SHOT ABILITY ***/
-		window.addEventListener("keyup", (e)=>{
+		window.addEventListener("keyup", (e)=> {
 			var imgData, imgNode;
 			//Listen to 'P' key
-			if(e.which !== 80) return;
+			if (e.which !== 80) return;
 			try {
 				imgData = this.renderer.domElement.toDataURL();
 				console.log(imgData);
 			}
-			catch(e) {
+			catch (e) {
 				console.log(e)
 				console.log("Browser does not support taking screenshot of 3d context");
 				return;
 			}
 		});
-
-		this.animate();
 	}
 
 	private onWindowResize = function () {
@@ -175,33 +226,63 @@ class App {
 	private update() {
 		//this.spectrums = this.audioManager.getSpectrum();
 		//this.draw(spectrums);
-	}
+		this.analyser.getByteFrequencyData(this.freqByteData);
+		this.analyser.getByteTimeDomainData(this.timeByteData)
 
-	private draw(spectrums) {
-		//描画
-		//spectrums 0 - 200の範囲
+		//リングの処理
+		//add a new average volume onto the list
+		//平均化　ピークを合わせる　
+		var sum = 0;
+		for(var i = 0; i < this.BIN_COUNT; i++) {
+			sum += this.freqByteData[i];
+		}
+		var aveLevel = sum / this.BIN_COUNT;
+		var scaled_average = (aveLevel / 256) * 1.0*2; //256 is the highest a level can be
+		this.levels.push(scaled_average);
+		this.levels.shift(1);
 
-		//this.canvasContext.clearRect(0, 0, this.canvas.width, this.canvas.height);
-		//for (var i = 0, len = spectrums.length; i < len; i++) {
-		//	this.canvasContext.fillRect(i * 10, 0, 5, spectrums[i]);
-		//}
+		////add a new color onto the list
+		////生成するカラー決定
+		//var n = Math.abs(perlin.noise(noisePos, 0, 0));
+		//colors.push(n);
+		//colors.shift(1);
+
+		//write current waveform into all rings
+		//z軸変化はdbの時間軸変化で表す
+		for(var j = 0; j < this.SEGMENTS; j++) {
+			this.loopGeom.vertices[j].z = this.timeByteData[j];//stretch by 2
+		}
+		// link up last segment
+		this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
+		this.loopGeom.verticesNeedUpdate = true;
+
+		//console.log(bytes);
+		var d = 10*scaled_average;
+		//this.cube.position.y = d
+		if (d > 0)this.cube.scale.set(d, d, d);
 	}
 
 	private render() {
-		//var d = 50;
-		//this.cube.position.y = d
-		//this.cube.scale.set(d / 100, d / 100, d / 100);
 		this.renderer.render(this.scene, this.camera);
 	}
 
 	public animate() {
 		this.update();
-		this.draw(this.spectrums);
+		this.render();
 
 		requestAnimationFrame((e)=>
 				this.animate()
 		);
-		this.render();
+	}
+
+	//todo
+	public loadSoundCloud(){
+
+	}
+
+	//todo
+	public initAudioAPI() {
+
 	}
 }
 
