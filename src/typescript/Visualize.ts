@@ -1,4 +1,4 @@
-class Visualize extends THREE.Object3D{
+class Visualize extends THREE.Object3D {
 
 	private RINGCOUNT = 160;//リングの数
 	private SEPARATION = 30;
@@ -10,12 +10,12 @@ class Visualize extends THREE.Object3D{
 	private loopGeom;
 	private material;
 
-	constructor(){
+	constructor() {
 		super();
 		this.init();
 	}
 
-	private init(){
+	private init() {
 
 		//cube追加
 		var geometry = new THREE.BoxGeometry(40, 40, 40);
@@ -60,8 +60,38 @@ class Visualize extends THREE.Object3D{
 
 	}
 
-	public update(){
+	public update(freqByteData, timeByteData) {
 
+		//add a new average volume onto the list
+		//平均化　ピークを合わせる　
+		var sum = 0;
+		for (var i = 0; i < this.BIN_COUNT; i++) {
+			sum += freqByteData[i];
+		}
+		var aveLevel = sum / this.BIN_COUNT;
+		var scaled_average = (aveLevel / 256) * 1.0 * 2; //256 is the highest a level can be
+		//this.levels.push(scaled_average);
+		//this.levels.shift();
+
+		////add a new color onto the list
+		////生成するカラー決定
+		//var n = Math.abs(perlin.noise(noisePos, 0, 0));
+		//colors.push(n);
+		//colors.shift(1);
+
+		//write current waveform into all rings
+		//z軸変化はdbの時間軸変化で表す
+		for (var j = 0; j < this.SEGMENTS; j++) {
+			this.loopGeom.vertices[j].z = timeByteData[j];//stretch by 2
+		}
+		// link up last segment
+		this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
+		this.loopGeom.verticesNeedUpdate = true;
+
+		//console.log(bytes);
+		var d = 10 * scaled_average;
+		//this.cube.position.y = d
+		this.cube.scale.set(d, d, d);
 
 	}
 }

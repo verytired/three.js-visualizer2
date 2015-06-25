@@ -10,6 +10,7 @@ var SoundManager = (function (_super) {
         _super.call(this);
         this.CLIENT_ID = 'd4668edbb5d755565ca2079b70b35576';
         this.TRACK_URL = 'https://soundcloud.com/ben-klock/josh-wink-are-you-there-ben-klock-remix';
+        this.isPlay = false;
     }
     SoundManager.prototype.init = function () {
         var _this = this;
@@ -39,7 +40,26 @@ var SoundManager = (function (_super) {
         });
     };
     SoundManager.prototype.play = function () {
+        this.isPlay = true;
         this.audio.play();
+    };
+    SoundManager.prototype.stop = function () {
+        this.isPlay = false;
+        this.audio.stop();
+    };
+    SoundManager.prototype.update = function () {
+        if (!this.isPlay)
+            return;
+        this.analyser.getByteFrequencyData(this.freqByteData);
+        this.analyser.getByteTimeDomainData(this.timeByteData);
+    };
+    SoundManager.prototype.getFreqByteData = function () {
+        if (!this.isPlay)
+            return;
+        return this.freqByteData;
+    };
+    SoundManager.prototype.getTimeByteData = function () {
+        return this.timeByteData;
     };
     return SoundManager;
 })(EventEmitter2);
@@ -86,7 +106,20 @@ var Visualize = (function (_super) {
         }
         this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
     };
-    Visualize.prototype.update = function () {
+    Visualize.prototype.update = function (freqByteData, timeByteData) {
+        var sum = 0;
+        for (var i = 0; i < this.BIN_COUNT; i++) {
+            sum += freqByteData[i];
+        }
+        var aveLevel = sum / this.BIN_COUNT;
+        var scaled_average = (aveLevel / 256) * 1.0 * 2;
+        for (var j = 0; j < this.SEGMENTS; j++) {
+            this.loopGeom.vertices[j].z = timeByteData[j];
+        }
+        this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
+        this.loopGeom.verticesNeedUpdate = true;
+        var d = 10 * scaled_average;
+        this.cube.scale.set(d, d, d);
     };
     return Visualize;
 })(THREE.Object3D);
@@ -105,13 +138,13 @@ var App = (function () {
         this.initThreeJS();
         var CLIENT_ID = 'd4668edbb5d755565ca2079b70b35576';
         var TRACK_URL = 'https://soundcloud.com/ben-klock/josh-wink-are-you-there-ben-klock-remix';
-        var sc = new SoundManager();
-        sc.addListener('loaded', function (e) {
+        this.sm = new SoundManager();
+        this.sm.addListener('loaded', function (e) {
             console.log("soundcloud loadend");
-            sc.play();
+            _this.sm.play();
             _this.animate();
         });
-        sc.init();
+        this.sm.init();
     }
     App.prototype.initThreeJS = function () {
         var _this = this;
@@ -147,8 +180,6 @@ var App = (function () {
         }), false);
         this.vs = new Visualize();
         this.scene.add(this.vs);
-        this.canvas = document.getElementById('visualizer');
-        this.canvasContext = this.canvas.getContext('2d');
         var gui = new dat.GUI();
         var wireframeControl = gui.add(this.vizParams, 'isWireFrame');
         wireframeControl.onChange(function (value) {
@@ -169,7 +200,8 @@ var App = (function () {
         });
     };
     App.prototype.update = function () {
-        this.vs.update();
+        this.sm.update();
+        this.vs.update(this.sm.getFreqByteData(), this.sm.getTimeByteData());
     };
     App.prototype.render = function () {
         this.renderer.render(this.scene, this.camera);

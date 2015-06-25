@@ -1,18 +1,7 @@
 /// <reference path="DefinitelyTyped/threejs/three.d.ts" />
 /// <reference path="DefinitelyTyped/dat-gui/dat-gui.d.ts" />
 /// <reference path="Visualize.ts" />
-//
-//interface Window {
-//	AudioContext: any;
-//	webkitAudioContext: any;
-//}
-
-//外部ライブラリ定義
-//この部分はコンパイルのみに使われるので型指定は適当
-declare var SC:{
-	get: (a, b, c)=>any;
-	initialize: (a)=>any;
-};
+/// <reference path="SoundManager.ts" />
 
 declare module THREE {
 	export var OrbitControls;
@@ -26,15 +15,12 @@ class App {
 	private container;
 	private controls;
 
-	private canvas;
-	private canvasContext;
-	private spectrums;
-
 	private vizParams = {
 		isWireFrame: false,
 	};
 
 	private vs:Visualize;
+	private sm:SoundManager;
 
 	constructor() {
 		console.log("app start");
@@ -46,13 +32,13 @@ class App {
 		var CLIENT_ID = 'd4668edbb5d755565ca2079b70b35576';
 		var TRACK_URL = 'https://soundcloud.com/ben-klock/josh-wink-are-you-there-ben-klock-remix';
 
-		var sc = new SoundManager();
-		sc.addListener('loaded', (e)=> {
+		this.sm = new SoundManager();
+		this.sm.addListener('loaded', (e)=> {
 			console.log("soundcloud loadend")
-			sc.play();
+			this.sm.play();
 			this.animate();
 		})
-		sc.init();
+		this.sm.init();
 	}
 
 	private initThreeJS() {
@@ -108,10 +94,6 @@ class App {
 		this.vs = new Visualize();
 		this.scene.add(this.vs);
 
-		this.canvas = document.getElementById('visualizer');
-		this.canvasContext = this.canvas.getContext('2d');
-		//this.canvas.setAttribute('width', this.audioManager.getAnalyser().frequencyBinCount * 10);
-
 		//dat-gui設定
 		var gui = new dat.GUI();
 		var wireframeControl = gui.add(this.vizParams, 'isWireFrame');
@@ -143,51 +125,8 @@ class App {
 	}
 
 	private update() {
-		//this.spectrums = this.audioManager.getSpectrum();
-		//this.draw(spectrums);
-
-		//this.analyser.getByteFrequencyData(this.freqByteData);
-		//this.analyser.getByteTimeDomainData(this.timeByteData)
-
-		//add a new average volume onto the list
-		//平均化　ピークを合わせる　
-		/*
-		 var sum = 0;
-		 for(var i = 0; i < this.BIN_COUNT; i++) {
-		 sum += this.freqByteData[i];
-		 }
-		 var aveLevel = sum / this.BIN_COUNT;
-		 var scaled_average = (aveLevel / 256) * 1.0*2; //256 is the highest a level can be
-		 this.levels.push(scaled_average);
-		 this.levels.shift();
-		 */
-
-		this.vs.update();
-
-		//リングの処理
-
-		/*
-		 ////add a new color onto the list
-		 ////生成するカラー決定
-		 //var n = Math.abs(perlin.noise(noisePos, 0, 0));
-		 //colors.push(n);
-		 //colors.shift(1);
-
-		 //write current waveform into all rings
-		 //z軸変化はdbの時間軸変化で表す
-		 for(var j = 0; j < this.SEGMENTS; j++) {
-		 this.loopGeom.vertices[j].z = this.timeByteData[j];//stretch by 2
-		 }
-		 // link up last segment
-		 this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
-		 this.loopGeom.verticesNeedUpdate = true;
-
-		 //console.log(bytes);
-		 var d = 10*scaled_average;
-		 //this.cube.position.y = d
-		 if (d > 0)this.cube.scale.set(d, d, d);
-		 */
-
+		this.sm.update()
+		this.vs.update(this.sm.getFreqByteData(),this.sm.getTimeByteData());
 	}
 
 	private render() {
