@@ -72,6 +72,7 @@ var Visualize = (function (_super) {
         this.INIT_RADIUS = 50;
         this.SEGMENTS = 512;
         this.BIN_COUNT = 512;
+        this.noisePos = 0;
         this.init();
     }
     Visualize.prototype.init = function () {
@@ -94,12 +95,12 @@ var Visualize = (function (_super) {
             depthTest: false,
             transparent: true
         });
-        var line = new THREE.Line(this.loopGeom, m);
+        this.ring = new THREE.Line(this.loopGeom, m);
         var scale = 1;
         scale *= 0.5;
-        line.scale.x = scale;
-        line.scale.y = scale;
-        this.add(line);
+        this.ring.scale.x = scale;
+        this.ring.scale.y = scale;
+        this.add(this.ring);
         for (var j = 0; j < this.SEGMENTS; j++) {
             var v = this.loopGeom.vertices[j];
             this.loopGeom.vertices[j].z = 0;
@@ -113,11 +114,19 @@ var Visualize = (function (_super) {
         }
         var aveLevel = sum / this.BIN_COUNT;
         var scaled_average = (aveLevel / 256) * 1.0 * 2;
+        this.noisePos += 0.005;
+        var perlin = new ImprovedNoise();
+        var n = Math.abs(perlin.noise(this.noisePos, 0, 0));
         for (var j = 0; j < this.SEGMENTS; j++) {
             this.loopGeom.vertices[j].z = timeByteData[j];
         }
+        var hue = n;
+        this.ring.material.color.setHSL(hue, 1, 0.51 * .8);
         this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
         this.loopGeom.verticesNeedUpdate = true;
+        var rotRng = Math.PI / 2;
+        this.rotation.x = perlin.noise(this.noisePos, 0, 0) * rotRng;
+        this.rotation.y = perlin.noise(this.noisePos, 100, 0) * rotRng;
         var d = 10 * scaled_average;
         this.cube.scale.set(d, d, d);
     };

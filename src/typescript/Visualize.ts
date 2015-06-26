@@ -1,3 +1,6 @@
+
+declare var ImprovedNoise: any;
+
 class Visualize extends THREE.Object3D {
 
 	private RINGCOUNT = 160;//リングの数
@@ -7,8 +10,11 @@ class Visualize extends THREE.Object3D {
 	private BIN_COUNT = 512;
 
 	private cube;
+	private ring
 	private loopGeom;
 	private material;
+
+	private noisePos = 0;
 
 	constructor() {
 		super();
@@ -42,13 +48,13 @@ class Visualize extends THREE.Object3D {
 			depthTest: false,
 			transparent: true
 		});
-		var line = new THREE.Line(this.loopGeom, m);
+		this.ring = new THREE.Line(this.loopGeom, m);
 
 		var scale = 1;
 		scale *= 0.5;
-		line.scale.x = scale;
-		line.scale.y = scale;
-		this.add(line);
+		this.ring.scale.x = scale;
+		this.ring.scale.y = scale;
+		this.add(this.ring);
 
 		//z-index
 		for (var j = 0; j < this.SEGMENTS; j++) {
@@ -74,8 +80,10 @@ class Visualize extends THREE.Object3D {
 		//this.levels.shift();
 
 		////add a new color onto the list
-		////生成するカラー決定
-		//var n = Math.abs(perlin.noise(noisePos, 0, 0));
+		//生成するカラー決定
+		this.noisePos += 0.005;
+		var perlin = new ImprovedNoise();
+		var n = Math.abs(perlin.noise(this.noisePos, 0, 0));
 		//colors.push(n);
 		//colors.shift(1);
 
@@ -85,8 +93,14 @@ class Visualize extends THREE.Object3D {
 			this.loopGeom.vertices[j].z = timeByteData[j];//stretch by 2
 		}
 		// link up last segment
+		var hue = n;
+		this.ring.material.color.setHSL(hue, 1, 0.51*.8);
 		this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
 		this.loopGeom.verticesNeedUpdate = true;
+
+		var rotRng = Math.PI /2;
+		this.rotation.x = perlin.noise(this.noisePos,0,0) * rotRng;
+		this.rotation.y = perlin.noise(this.noisePos ,100,0) * rotRng;
 
 		//console.log(bytes);
 		var d = 10 * scaled_average;
