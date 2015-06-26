@@ -70,7 +70,7 @@ var Visualize = (function (_super) {
         _super.call(this);
         this.RINGCOUNT = 160;
         this.SEPARATION = 30;
-        this.INIT_RADIUS = 50;
+        this.INIT_RADIUS = 100;
         this.SEGMENTS = 512;
         this.BIN_COUNT = 512;
         this.rings = [];
@@ -85,12 +85,11 @@ var Visualize = (function (_super) {
         this.cube.castShadow = true;
         this.add(this.cube);
         var loopShape = new THREE.Shape();
-        var r = 100;
-        loopShape.absarc(0, 0, 100, 0, Math.PI * 2, false);
+        loopShape.absarc(0, 0, this.INIT_RADIUS, 0, Math.PI * 2, false);
         this.loopGeom = loopShape.createPointsGeometry(512 / 2);
         this.loopGeom.dynamic = true;
         var scale = 1;
-        for (var i = 0; i < 100; i++) {
+        for (var i = 0; i < this.RINGCOUNT; i++) {
             var m = new THREE.LineBasicMaterial({
                 color: 0xffffff,
                 linewidth: 10,
@@ -126,7 +125,7 @@ var Visualize = (function (_super) {
             this.loopGeom.vertices[j].z = timeByteData[j];
         }
         var hue = n;
-        for (var i = 0; i < 100; i++) {
+        for (var i = 0; i < this.RINGCOUNT; i++) {
             this.rings[i].material.color.setHSL(hue, 1, 0.51 * .8);
             this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
             this.loopGeom.verticesNeedUpdate = true;
@@ -141,7 +140,7 @@ var Visualize = (function (_super) {
         this.cube.material.wireframe = bool;
     };
     Visualize.prototype.setLineWidth = function (value) {
-        for (var i = 0; i < 100; i++) {
+        for (var i = 0; i < this.RINGCOUNT; i++) {
             this.rings[i].material.linewidth = value;
         }
     };

@@ -4,7 +4,7 @@ class Visualize extends THREE.Object3D {
 
 	private RINGCOUNT = 160;//リングの数
 	private SEPARATION = 30;
-	private INIT_RADIUS = 50;
+	private INIT_RADIUS = 100//リング半径;
 	private SEGMENTS = 512; //リングの分割数
 	private BIN_COUNT = 512;
 
@@ -32,14 +32,13 @@ class Visualize extends THREE.Object3D {
 
 		//shape test circle
 		var loopShape = new THREE.Shape();
-		var r = 100
-		loopShape.absarc(0, 0, 100, 0, Math.PI * 2, false);//これで円を書いている absarc(原点x,原点y,半径,start角度,end角度,???)
+		loopShape.absarc(0, 0, this.INIT_RADIUS, 0, Math.PI * 2, false);//これで円を書いている absarc(原点x,原点y,半径,start角度,end角度,???)
 		this.loopGeom = loopShape.createPointsGeometry(512 / 2);//shapeにgeometoryの頂点データを生成する  //2点生成されるから半分の数の指定でいい？
 		this.loopGeom.dynamic = true;
 
 		//頂点をLineで結ぶ
 		var scale = 1;
-		for (var i = 0; i < 100; i++) {
+		for (var i = 0; i < this.RINGCOUNT; i++) {
 			var m = new THREE.LineBasicMaterial({
 				color: 0xffffff,
 				linewidth: 10,
@@ -94,7 +93,7 @@ class Visualize extends THREE.Object3D {
 		}
 		// link up last segment
 		var hue = n;
-		for (var i = 0; i < 100; i++) {
+		for (var i = 0; i < this.RINGCOUNT; i++) {
 			this.rings[i].material.color.setHSL(hue, 1, 0.51 * .8);
 			this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
 			this.loopGeom.verticesNeedUpdate = true;
@@ -114,7 +113,7 @@ class Visualize extends THREE.Object3D {
 		this.cube.material.wireframe = bool;
 	}
 	public setLineWidth(value){
-		for (var i = 0; i < 100; i++) {
+		for (var i = 0; i < this.RINGCOUNT; i++) {
 			this.rings[i].material.linewidth = value
 		}
 	}
