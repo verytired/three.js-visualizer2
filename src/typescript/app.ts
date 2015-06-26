@@ -16,7 +16,9 @@ class App {
 	private controls;
 
 	private vizParams = {
+		axis:true,
 		isWireFrame: false,
+		lineWidth: 3,
 	};
 
 	private vs:Visualize;
@@ -43,7 +45,7 @@ class App {
 
 	private initThreeJS() {
 		//1.カメラ追加
-		this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+		this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000000);
 		this.camera.position.set(0, 70, 70);
 
 		//2.シーン追加
@@ -94,12 +96,22 @@ class App {
 		this.vs = new Visualize();
 		this.scene.add(this.vs);
 
-		//dat-gui設定
+		//dat-gui settings
 		var gui = new dat.GUI();
 		var wireframeControl = gui.add(this.vizParams, 'isWireFrame');
 		wireframeControl.onChange((value)=> {
-			//this.material.wireframe = value
+			 this.vs.setWireFrame(value);
 		});
+
+		var axix_cntrl = gui.add(this.vizParams, 'axis')
+		axix_cntrl.onChange((value)=> {
+			axis.visible = value;
+		});
+
+		var lw_cntrl = gui.add(this.vizParams,'lineWidth',1,30);
+		lw_cntrl.onChange((value)=>{
+			this.vs.setLineWidth(value)
+		})
 
 		/*** ADDING SCREEN SHOT ABILITY ***/
 		window.addEventListener("keyup", (e)=> {

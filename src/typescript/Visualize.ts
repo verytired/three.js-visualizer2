@@ -1,5 +1,4 @@
-
-declare var ImprovedNoise: any;
+declare var ImprovedNoise:any;
 
 class Visualize extends THREE.Object3D {
 
@@ -10,7 +9,7 @@ class Visualize extends THREE.Object3D {
 	private BIN_COUNT = 512;
 
 	private cube;
-	private ring
+	private rings:any[]=[];
 	private loopGeom;
 	private material;
 
@@ -25,7 +24,7 @@ class Visualize extends THREE.Object3D {
 
 		//cube追加
 		var geometry = new THREE.BoxGeometry(40, 40, 40);
-		this.material = new THREE.MeshPhongMaterial({color: 0xff0000});
+		this.material = new THREE.MeshPhongMaterial({color: 0x00FF7F, ambient:0x990000,specular:0xffff00,shininess:30 });
 		this.cube = new THREE.Mesh(geometry, this.material);
 		this.cube.position.set(0, 0, 0);
 		this.cube.castShadow = true;
@@ -34,28 +33,29 @@ class Visualize extends THREE.Object3D {
 		//shape test circle
 		var loopShape = new THREE.Shape();
 		var r = 100
-
 		loopShape.absarc(0, 0, 100, 0, Math.PI * 2, false);//これで円を書いている absarc(原点x,原点y,半径,start角度,end角度,???)
 		this.loopGeom = loopShape.createPointsGeometry(512 / 2);//shapeにgeometoryの頂点データを生成する  //2点生成されるから半分の数の指定でいい？
 		this.loopGeom.dynamic = true;
 
 		//頂点をLineで結ぶ
-		var m = new THREE.LineBasicMaterial({
-			color: 0xffffff,
-			linewidth: 1,
-			opacity: 0.7,
-			blending: THREE.AdditiveBlending,
-			depthTest: false,
-			transparent: true
-		});
-		this.ring = new THREE.Line(this.loopGeom, m);
-
 		var scale = 1;
-		scale *= 0.5;
-		this.ring.scale.x = scale;
-		this.ring.scale.y = scale;
-		this.add(this.ring);
+		for (var i = 0; i < 100; i++) {
+			var m = new THREE.LineBasicMaterial({
+				color: 0xffffff,
+				linewidth: 10,
+				opacity: 0.7,
+				blending: THREE.AdditiveBlending,
+				depthTest: false,
+				transparent: true
+			});
+			var ring = new THREE.Line(this.loopGeom, m);
 
+			scale *= 1.5;
+			ring.scale.x = scale;
+			ring.scale.y = scale;
+			this.add(ring);
+			this.rings.push(ring);
+		}
 		//z-index
 		for (var j = 0; j < this.SEGMENTS; j++) {
 			var v:any = this.loopGeom.vertices[j]
@@ -94,18 +94,28 @@ class Visualize extends THREE.Object3D {
 		}
 		// link up last segment
 		var hue = n;
-		this.ring.material.color.setHSL(hue, 1, 0.51*.8);
-		this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
-		this.loopGeom.verticesNeedUpdate = true;
-
-		var rotRng = Math.PI /2;
-		this.rotation.x = perlin.noise(this.noisePos,0,0) * rotRng;
-		this.rotation.y = perlin.noise(this.noisePos ,100,0) * rotRng;
+		for (var i = 0; i < 100; i++) {
+			this.rings[i].material.color.setHSL(hue, 1, 0.51 * .8);
+			this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
+			this.loopGeom.verticesNeedUpdate = true;
+		}
+		var rotRng = Math.PI / 2;
+		this.rotation.x = perlin.noise(this.noisePos, 0, 0) * rotRng;
+		this.rotation.y = perlin.noise(this.noisePos, 100, 0) * rotRng;
 
 		//console.log(bytes);
 		var d = 10 * scaled_average;
 		//this.cube.position.y = d
 		this.cube.scale.set(d, d, d);
 
+	}
+
+	public setWireFrame(bool){
+		this.cube.material.wireframe = bool;
+	}
+	public setLineWidth(value){
+		for (var i = 0; i < 100; i++) {
+			this.rings[i].material.linewidth = value
+		}
 	}
 }
