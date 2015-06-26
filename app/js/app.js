@@ -24,6 +24,7 @@ var SoundManager = (function (_super) {
                 }
                 return;
             }
+            ;
             _this.audio = document.getElementById('audio');
             var streamUrl = sound.stream_url + '?client_id=' + _this.CLIENT_ID;
             _this.audio.setAttribute('src', streamUrl);
@@ -69,37 +70,41 @@ var Visualize = (function (_super) {
         _super.call(this);
         this.RINGCOUNT = 160;
         this.SEPARATION = 30;
-        this.INIT_RADIUS = 50;
+        this.INIT_RADIUS = 100;
         this.SEGMENTS = 512;
         this.BIN_COUNT = 512;
+        this.rings = [];
+        this.noisePos = 0;
         this.init();
     }
     Visualize.prototype.init = function () {
         var geometry = new THREE.BoxGeometry(40, 40, 40);
-        this.material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+        this.material = new THREE.MeshPhongMaterial({ color: 0x00FF7F, ambient: 0x990000, specular: 0xffff00, shininess: 30 });
         this.cube = new THREE.Mesh(geometry, this.material);
         this.cube.position.set(0, 0, 0);
         this.cube.castShadow = true;
         this.add(this.cube);
         var loopShape = new THREE.Shape();
-        var r = 100;
-        loopShape.absarc(0, 0, 100, 0, Math.PI * 2, false);
+        loopShape.absarc(0, 0, this.INIT_RADIUS, 0, Math.PI * 2, false);
         this.loopGeom = loopShape.createPointsGeometry(512 / 2);
         this.loopGeom.dynamic = true;
-        var m = new THREE.LineBasicMaterial({
-            color: 0xffffff,
-            linewidth: 1,
-            opacity: 0.7,
-            blending: THREE.AdditiveBlending,
-            depthTest: false,
-            transparent: true
-        });
-        var line = new THREE.Line(this.loopGeom, m);
         var scale = 1;
-        scale *= 0.5;
-        line.scale.x = scale;
-        line.scale.y = scale;
-        this.add(line);
+        for (var i = 0; i < this.RINGCOUNT; i++) {
+            var m = new THREE.LineBasicMaterial({
+                color: 0xffffff,
+                linewidth: 10,
+                opacity: 0.7,
+                blending: THREE.AdditiveBlending,
+                depthTest: false,
+                transparent: true
+            });
+            var ring = new THREE.Line(this.loopGeom, m);
+            scale *= 1.5;
+            ring.scale.x = scale;
+            ring.scale.y = scale;
+            this.add(ring);
+            this.rings.push(ring);
+        }
         for (var j = 0; j < this.SEGMENTS; j++) {
             var v = this.loopGeom.vertices[j];
             this.loopGeom.vertices[j].z = 0;
@@ -113,13 +118,31 @@ var Visualize = (function (_super) {
         }
         var aveLevel = sum / this.BIN_COUNT;
         var scaled_average = (aveLevel / 256) * 1.0 * 2;
+        this.noisePos += 0.005;
+        var perlin = new ImprovedNoise();
+        var n = Math.abs(perlin.noise(this.noisePos, 0, 0));
         for (var j = 0; j < this.SEGMENTS; j++) {
             this.loopGeom.vertices[j].z = timeByteData[j];
         }
-        this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
-        this.loopGeom.verticesNeedUpdate = true;
+        var hue = n;
+        for (var i = 0; i < this.RINGCOUNT; i++) {
+            this.rings[i].material.color.setHSL(hue, 1, 0.51 * .8);
+            this.loopGeom.vertices[this.SEGMENTS].z = this.loopGeom.vertices[0].z;
+            this.loopGeom.verticesNeedUpdate = true;
+        }
+        var rotRng = Math.PI / 2;
+        this.rotation.x = perlin.noise(this.noisePos, 0, 0) * rotRng;
+        this.rotation.y = perlin.noise(this.noisePos, 100, 0) * rotRng;
         var d = 10 * scaled_average;
         this.cube.scale.set(d, d, d);
+    };
+    Visualize.prototype.setWireFrame = function (bool) {
+        this.cube.material.wireframe = bool;
+    };
+    Visualize.prototype.setLineWidth = function (value) {
+        for (var i = 0; i < this.RINGCOUNT; i++) {
+            this.rings[i].material.linewidth = value;
+        }
     };
     return Visualize;
 })(THREE.Object3D);
@@ -127,7 +150,9 @@ var App = (function () {
     function App() {
         var _this = this;
         this.vizParams = {
+            axis: true,
             isWireFrame: false,
+            lineWidth: 3,
         };
         this.onWindowResize = function () {
             this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -148,7 +173,7 @@ var App = (function () {
     }
     App.prototype.initThreeJS = function () {
         var _this = this;
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+        this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000000);
         this.camera.position.set(0, 70, 70);
         this.scene = new THREE.Scene();
         this.renderer = new THREE.WebGLRenderer({
@@ -183,6 +208,15 @@ var App = (function () {
         var gui = new dat.GUI();
         var wireframeControl = gui.add(this.vizParams, 'isWireFrame');
         wireframeControl.onChange(function (value) {
+            _this.vs.setWireFrame(value);
+        });
+        var axix_cntrl = gui.add(this.vizParams, 'axis');
+        axix_cntrl.onChange(function (value) {
+            axis.visible = value;
+        });
+        var lw_cntrl = gui.add(this.vizParams, 'lineWidth', 1, 30);
+        lw_cntrl.onChange(function (value) {
+            _this.vs.setLineWidth(value);
         });
         window.addEventListener("keyup", function (e) {
             var imgData, imgNode;
